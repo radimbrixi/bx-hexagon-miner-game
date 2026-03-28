@@ -30,6 +30,7 @@ let currentMode = "preset";
 let boardState = null;
 let timerId = null;
 let elapsedSeconds = 0;
+let highlightedCell = null;
 
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
@@ -120,6 +121,38 @@ function startTimer() {
 function setStatus(title, text) {
   statusTitle.textContent = title;
   statusText.textContent = text;
+}
+
+function updateHighlights() {
+  const buttons = boardElement.querySelectorAll(".hex-cell");
+  for (const button of buttons) {
+    button.classList.remove("neighbor-focus", "anchor-focus");
+  }
+
+  if (!highlightedCell || !boardState) {
+    return;
+  }
+
+  const anchorSelector = `.hex-cell[data-row="${highlightedCell.row}"][data-col="${highlightedCell.col}"]`;
+  const anchorButton = boardElement.querySelector(anchorSelector);
+  if (anchorButton) {
+    anchorButton.classList.add("anchor-focus");
+  }
+
+  const neighbors = getNeighbors(
+    highlightedCell.row,
+    highlightedCell.col,
+    boardState.config.rows,
+    boardState.config.cols,
+  );
+
+  for (const neighbor of neighbors) {
+    const selector = `.hex-cell[data-row="${neighbor.row}"][data-col="${neighbor.col}"]`;
+    const button = boardElement.querySelector(selector);
+    if (button) {
+      button.classList.add("neighbor-focus");
+    }
+  }
 }
 
 function createEmptyBoard(config) {
@@ -359,6 +392,8 @@ function renderBoard() {
       button.className = "hex-cell";
       button.setAttribute("role", "gridcell");
       button.setAttribute("aria-label", `Row ${row + 1}, Column ${col + 1}`);
+      button.dataset.row = String(row);
+      button.dataset.col = String(col);
       button.style.left = `${10 + (col * HORIZONTAL_STEP)}px`;
       button.style.top = `${10 + (row * VERTICAL_STEP) + (col % 2 === 1 ? HEX_HEIGHT / 2 : 0)}px`;
       button.textContent = getCellDisplay(cell);
@@ -387,21 +422,39 @@ function renderBoard() {
         event.preventDefault();
         toggleFlag(row, col);
       });
+      button.addEventListener("mouseenter", () => {
+        if (cell.revealed && !cell.mine && cell.adjacent > 0) {
+          highlightedCell = { row, col };
+          updateHighlights();
+          setStatus("Hex count preview", "Hovered numbers count the six touching hexes highlighted on the board.");
+        }
+      });
+      button.addEventListener("mouseleave", () => {
+        if (highlightedCell && highlightedCell.row === row && highlightedCell.col === col) {
+          highlightedCell = null;
+          updateHighlights();
+          if (!boardState.isGameOver) {
+            setStatus("Sweep in progress", "Hovered numbers highlight the six touching hexes they count.");
+          }
+        }
+      });
 
       boardElement.appendChild(button);
     }
   }
 
   updateMineCounter();
+  updateHighlights();
 }
 
 function startGame(config) {
   stopTimer();
   elapsedSeconds = 0;
+  highlightedCell = null;
   timerElement.textContent = "0";
   boardState = createEmptyBoard(config);
   activeModeLabel.textContent = config.name;
-  setStatus("Ready to sweep", "Left click reveals a hex. Right click plants a warning flag.");
+  setStatus("Ready to sweep", "Left click reveals a hex. Right click plants a warning flag. Hover a number to see its six neighbors.");
   renderBoard();
 }
 
