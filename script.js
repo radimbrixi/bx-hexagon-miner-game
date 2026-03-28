@@ -1,9 +1,9 @@
 const presetConfigs = [
   { id: "starter", name: "Starter Hive", cols: 8, rows: 8, mineRatio: 0.14, tag: "Calm" },
   { id: "scout", name: "Scout Comb", cols: 10, rows: 10, mineRatio: 0.17, tag: "Warm" },
-  { id: "worker", name: "Worker Nest", cols: 12, rows: 12, mineRatio: 0.19, tag: "Alert" },
-  { id: "queen", name: "Queen Chamber", cols: 14, rows: 14, mineRatio: 0.22, tag: "Sharp" },
-  { id: "storm", name: "Storm Swarm", cols: 16, rows: 16, mineRatio: 0.25, tag: "Brutal" },
+  { id: "worker", name: "Worker Nest", cols: 13, rows: 13, mineRatio: 0.19, tag: "Alert" },
+  { id: "queen", name: "Queen Chamber", cols: 17, rows: 17, mineRatio: 0.22, tag: "Sharp" },
+  { id: "storm", name: "Storm Swarm", cols: 22, rows: 22, mineRatio: 0.25, tag: "Brutal" },
 ];
 
 const beeLayer = document.getElementById("bee-layer");
