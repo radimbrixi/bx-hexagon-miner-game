@@ -45,3 +45,5 @@ If GitHub Pages is not already configured for the repository:
 3. Set the source to `GitHub Actions`.
 
 After that, every push to `main` will publish the latest version automatically.
+
+The production site is published through GitHub Pages at `https://radimbrixi.github.io/bx-hexagon-miner-game/`.
