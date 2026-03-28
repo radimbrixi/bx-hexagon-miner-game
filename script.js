@@ -6,6 +6,7 @@ const presetConfigs = [
   { id: "storm", name: "Storm Swarm", cols: 16, rows: 16, mineRatio: 0.25, tag: "Brutal" },
 ];
 
+const beeLayer = document.getElementById("bee-layer");
 const boardElement = document.getElementById("board");
 const presetGrid = document.getElementById("preset-grid");
 const mineCounter = document.getElementById("mine-counter");
@@ -40,6 +41,15 @@ let timerId = null;
 let elapsedSeconds = 0;
 let highlightedCell = null;
 let overlayTimeoutId = null;
+
+const beeConfigs = [
+  { edge: "top", duration: 36, delay: 0, scale: 1.0 },
+  { edge: "top", duration: 44, delay: -18, scale: 0.86, reverse: true },
+  { edge: "bottom", duration: 42, delay: -8, scale: 1.08 },
+  { edge: "bottom", duration: 50, delay: -26, scale: 0.92, reverse: true },
+  { edge: "left", duration: 34, delay: -11, scale: 0.9 },
+  { edge: "right", duration: 39, delay: -20, scale: 1.02, reverse: true },
+];
 
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
@@ -147,6 +157,19 @@ function clearEffects() {
   if (overlayTimeoutId) {
     clearTimeout(overlayTimeoutId);
     overlayTimeoutId = null;
+  }
+}
+
+function createAmbientBees() {
+  beeLayer.innerHTML = "";
+
+  for (const beeConfig of beeConfigs) {
+    const bee = document.createElement("div");
+    bee.className = `bee ${beeConfig.edge}${beeConfig.reverse ? " reverse" : ""}`;
+    bee.style.animationDuration = `${beeConfig.duration}s`;
+    bee.style.animationDelay = `${beeConfig.delay}s`;
+    bee.style.setProperty("--bee-scale", String(beeConfig.scale));
+    beeLayer.appendChild(bee);
   }
 }
 
@@ -575,4 +598,5 @@ resultButton.addEventListener("click", () => {
 createPresetButtons();
 updateCustomLabels();
 syncPresetSelection();
+createAmbientBees();
 startGame(selectedConfig);

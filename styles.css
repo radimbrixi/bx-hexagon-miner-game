@@ -44,6 +44,7 @@ body::before {
   mask-image: radial-gradient(circle at center, black 45%, transparent 100%);
 }
 
+.bee-layer,
 .fx-layer,
 .result-overlay {
   position: fixed;
@@ -51,9 +52,116 @@ body::before {
   pointer-events: none;
 }
 
+.bee-layer {
+  overflow: hidden;
+  z-index: 8;
+}
+
 .fx-layer {
   overflow: hidden;
   z-index: 40;
+}
+
+.bee {
+  position: absolute;
+  width: 22px;
+  height: 14px;
+  opacity: 0.88;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.22));
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+.bee::before,
+.bee::after {
+  content: "";
+  position: absolute;
+}
+
+.bee::before {
+  inset: 2px 2px 0;
+  border-radius: 999px;
+  background:
+    linear-gradient(90deg,
+      #201103 0 12%,
+      #f6c449 12% 34%,
+      #2a1806 34% 50%,
+      #f6c449 50% 72%,
+      #2a1806 72% 86%,
+      #f6c449 86% 100%);
+}
+
+.bee::after {
+  width: 9px;
+  height: 9px;
+  top: -4px;
+  left: 6px;
+  border-radius: 50% 50% 50% 20%;
+  background: rgba(230, 247, 255, 0.72);
+  box-shadow:
+    6px 1px 0 0 rgba(230, 247, 255, 0.62),
+    2px 8px 0 -5px rgba(255, 151, 44, 0.95);
+  transform: rotate(-10deg);
+}
+
+.bee.top {
+  top: 14px;
+  animation-name: beeCruiseHorizontal;
+}
+
+.bee.bottom {
+  bottom: 14px;
+  animation-name: beeCruiseHorizontal;
+}
+
+.bee.left {
+  left: 10px;
+  animation-name: beeCruiseVertical;
+}
+
+.bee.right {
+  right: 10px;
+  animation-name: beeCruiseVertical;
+}
+
+.bee.reverse {
+  animation-direction: reverse;
+}
+
+@keyframes beeCruiseHorizontal {
+  0% {
+    transform: translate3d(-10vw, 0, 0) scale(var(--bee-scale)) rotate(0deg);
+  }
+  24% {
+    transform: translate3d(22vw, 5px, 0) scale(var(--bee-scale)) rotate(3deg);
+  }
+  49% {
+    transform: translate3d(50vw, -4px, 0) scale(var(--bee-scale)) rotate(-2deg);
+  }
+  74% {
+    transform: translate3d(76vw, 4px, 0) scale(var(--bee-scale)) rotate(3deg);
+  }
+  100% {
+    transform: translate3d(112vw, -2px, 0) scale(var(--bee-scale)) rotate(0deg);
+  }
+}
+
+@keyframes beeCruiseVertical {
+  0% {
+    transform: translate3d(0, -12vh, 0) scale(var(--bee-scale)) rotate(90deg);
+  }
+  24% {
+    transform: translate3d(5px, 22vh, 0) scale(var(--bee-scale)) rotate(93deg);
+  }
+  49% {
+    transform: translate3d(-4px, 50vh, 0) scale(var(--bee-scale)) rotate(88deg);
+  }
+  74% {
+    transform: translate3d(6px, 76vh, 0) scale(var(--bee-scale)) rotate(92deg);
+  }
+  100% {
+    transform: translate3d(-2px, 112vh, 0) scale(var(--bee-scale)) rotate(90deg);
+  }
 }
 
 .result-overlay {
