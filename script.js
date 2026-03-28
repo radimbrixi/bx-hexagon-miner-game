@@ -384,6 +384,11 @@ function animateBabyBeeFlight(route) {
 
   let animationStart = null;
   let hatchTriggered = false;
+  const settleDuration = 320;
+  const wobbleDuration = 360;
+  const shakeDuration = 260;
+  const hopDuration = 180;
+  const preflightDuration = settleDuration + wobbleDuration + shakeDuration + hopDuration;
 
   function triggerIndividualHatch() {
     if (hatchTriggered) {
@@ -415,9 +420,53 @@ function animateBabyBeeFlight(route) {
       return;
     }
 
+    const elapsed = timestamp - animationStart;
+    const startX = route.start.x;
+    const startY = route.start.y;
+
+    if (elapsed < settleDuration) {
+      babyBee.style.transform = `translate3d(${startX}px, ${startY}px, 0) rotate(0deg) scale(0.42)`;
+      const frameId = window.requestAnimationFrame(step);
+      babyBeeFrameIds.push(frameId);
+      return;
+    }
+
+    if (elapsed < settleDuration + wobbleDuration) {
+      const phase = (elapsed - settleDuration) / wobbleDuration;
+      const wiggleX = Math.sin(phase * Math.PI * 2) * 2.4;
+      const wiggleY = Math.sin(phase * Math.PI * 4) * 0.8;
+      const angle = Math.sin(phase * Math.PI * 2) * 8;
+      babyBee.style.transform = `translate3d(${startX + wiggleX}px, ${startY + wiggleY}px, 0) rotate(${angle}deg) scale(0.46)`;
+      const frameId = window.requestAnimationFrame(step);
+      babyBeeFrameIds.push(frameId);
+      return;
+    }
+
     triggerIndividualHatch();
 
-    const linearProgress = Math.min((timestamp - animationStart) / route.duration, 1);
+    if (elapsed < settleDuration + wobbleDuration + shakeDuration) {
+      const phase = (elapsed - settleDuration - wobbleDuration) / shakeDuration;
+      const shakeX = Math.sin(phase * Math.PI * 10) * (3 + phase * 2);
+      const shakeY = Math.sin(phase * Math.PI * 8) * 1.2;
+      const angle = Math.sin(phase * Math.PI * 10) * 14;
+      babyBee.style.transform = `translate3d(${startX + shakeX}px, ${startY + shakeY}px, 0) rotate(${angle}deg) scale(${0.48 + phase * 0.08})`;
+      const frameId = window.requestAnimationFrame(step);
+      babyBeeFrameIds.push(frameId);
+      return;
+    }
+
+    if (elapsed < preflightDuration) {
+      const phase = (elapsed - settleDuration - wobbleDuration - shakeDuration) / hopDuration;
+      const hopLift = Math.sin(phase * Math.PI) * 16;
+      const hopForward = phase * 10;
+      babyBee.style.transform = `translate3d(${startX + hopForward}px, ${startY - hopLift}px, 0) rotate(${phase * 18}deg) scale(${0.56 + phase * 0.12})`;
+      const frameId = window.requestAnimationFrame(step);
+      babyBeeFrameIds.push(frameId);
+      return;
+    }
+
+    const flightElapsed = elapsed - preflightDuration;
+    const linearProgress = Math.min(flightElapsed / route.duration, 1);
     const progress = easeOutCubic(linearProgress);
     const point = cubicBezierPoint(route.start, route.controlA, route.controlB, route.end, progress);
     const tangent = cubicBezierTangent(route.start, route.controlA, route.controlB, route.end, progress);
@@ -430,7 +479,7 @@ function animateBabyBeeFlight(route) {
     const y = point.y + (normalY * spiralWave * spiralRadius);
     const angle = Math.atan2(tangent.y, tangent.x) * (180 / Math.PI) + (spiralWave * 12);
     const scale = route.startScale + ((route.endScale - route.startScale) * progress);
-    babyBee.style.transform = `translate3d(${x}px, ${y}px, 0) rotate(${angle}deg) scale(${scale})`;
+    babyBee.style.transform = `translate3d(${x}px, ${y}px, 0) rotate(${angle}deg) scale(${Math.max(scale, 0.66)})`;
 
     if (linearProgress >= 1) {
       babyBee.remove();
