@@ -39,6 +39,10 @@ const HEX_HEIGHT_RATIO = 0.92;
 const HORIZONTAL_STEP_RATIO = 0.75;
 const TIMER_TICK_MS = 100;
 const LEADERBOARD_STORAGE_KEY = "bx-hexagon-miner-best-times";
+const FIREWORK_BURST_COUNT = 70;
+const FIREWORK_BURST_SPACING_MS = 140;
+const FIREWORK_MAX_DELAY_MS = 120;
+const FIREWORK_MAX_DURATION_MS = 1750;
 
 let selectedConfig = presetConfigs[0];
 let currentMode = "preset";
@@ -344,7 +348,7 @@ function spawnParticles(type, count) {
 function spawnFireworks() {
   const colors = ["#ffd75e", "#ff8a5b", "#fff0a6", "#8ae3ff", "#ff9fd2"];
 
-  for (let burst = 0; burst < 70; burst += 1) {
+  for (let burst = 0; burst < FIREWORK_BURST_COUNT; burst += 1) {
     const centerX = 14 + Math.random() * 72;
     const centerY = 10 + Math.random() * 42;
 
@@ -356,7 +360,7 @@ function spawnFireworks() {
       particle.style.left = `${centerX}vw`;
       particle.style.top = `${centerY}vh`;
       particle.style.animationDuration = `${1100 + Math.random() * 650}ms`;
-      particle.style.animationDelay = `${burst * 140 + Math.random() * 120}ms`;
+      particle.style.animationDelay = `${burst * FIREWORK_BURST_SPACING_MS + Math.random() * FIREWORK_MAX_DELAY_MS}ms`;
       particle.style.setProperty("--burst-x", `${Math.cos(angle) * distance}px`);
       particle.style.setProperty("--burst-y", `${Math.sin(angle) * distance}px`);
       particle.style.setProperty("--burst-scale", `${0.8 + Math.random() * 0.9}`);
@@ -365,6 +369,12 @@ function spawnFireworks() {
       particle.addEventListener("animationend", () => particle.remove(), { once: true });
     }
   }
+}
+
+function getFireworksTotalDuration() {
+  return ((FIREWORK_BURST_COUNT - 1) * FIREWORK_BURST_SPACING_MS)
+    + FIREWORK_MAX_DELAY_MS
+    + FIREWORK_MAX_DURATION_MS;
 }
 
 function getSafeCellsForEggs() {
@@ -689,13 +699,16 @@ function celebrateWin() {
   recordWin();
   spawnParticles("win-spark", 32);
   spawnFireworks();
-  animateQueenBee();
   showOverlay({
     eyebrow: "Hive cleared",
     title: "Sweet victory",
     message: `Fantastic run. You cleared the whole honeycomb in ${formatTime(elapsedMs)}. The mother bee lays fresh eggs, and young bees soon spiral out into the world.`,
     buttonLabel: "Play Another Round",
   });
+  overlayTimeoutId = window.setTimeout(() => {
+    animateQueenBee();
+    overlayTimeoutId = null;
+  }, getFireworksTotalDuration());
 }
 
 function explodeHoney() {
