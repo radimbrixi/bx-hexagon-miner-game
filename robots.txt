@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://radimbrixi.github.io/bx-hexagon-miner-game/sitemap.xml
