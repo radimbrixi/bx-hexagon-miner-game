@@ -4,7 +4,7 @@ BX Hexagon Miner Game is a honey-themed hex Minesweeper built with plain HTML, C
 
 Live site:
 
-`https://radimbrixi.github.io/bx-hexagon-miner-game/`
+[Play BX Hexagon Miner Game](https://radimbrixi.github.io/bx-hexagon-miner-game/)
 
 ## Overview
 
@@ -79,4 +79,4 @@ The site is deployed through GitHub Pages with GitHub Actions. Pushes to `main` 
 
 Production URL:
 
-`https://radimbrixi.github.io/bx-hexagon-miner-game/`
+[Play BX Hexagon Miner Game on GitHub Pages](https://radimbrixi.github.io/bx-hexagon-miner-game/)
