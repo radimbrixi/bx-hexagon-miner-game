@@ -32,22 +32,27 @@ const sizeSlider = document.getElementById("size-slider");
 const difficultySlider = document.getElementById("difficulty-slider");
 const sizeValue = document.getElementById("size-value");
 const difficultyValue = document.getElementById("difficulty-value");
+const leaderboardList = document.getElementById("leaderboard-list");
 
 const BASE_HEX_SIZE = 40;
 const HEX_HEIGHT_RATIO = 0.92;
 const HORIZONTAL_STEP_RATIO = 0.75;
+const TIMER_TICK_MS = 100;
+const LEADERBOARD_STORAGE_KEY = "bx-hexagon-miner-best-times";
 
 let selectedConfig = presetConfigs[0];
 let currentMode = "preset";
 let boardState = null;
 let timerId = null;
-let elapsedSeconds = 0;
+let elapsedMs = 0;
+let timerStartedAt = 0;
 let highlightedCell = null;
 let overlayTimeoutId = null;
 let queenBeeFrameId = null;
 let queenBeeTimeoutId = null;
 let hatchTimeoutId = null;
 let babyBeeFrameIds = [];
+let leaderboardEntries = loadLeaderboard();
 
 const beeConfigs = [
   { edge: "top", duration: 36, delay: 0, scale: 1.0 },
@@ -138,10 +143,11 @@ function startTimer() {
     return;
   }
 
+  timerStartedAt = performance.now() - elapsedMs;
   timerId = window.setInterval(() => {
-    elapsedSeconds += 1;
-    timerElement.textContent = String(elapsedSeconds);
-  }, 1000);
+    elapsedMs = performance.now() - timerStartedAt;
+    timerElement.textContent = formatTime(elapsedMs);
+  }, TIMER_TICK_MS);
 }
 
 function setStatus(title, text) {
@@ -149,14 +155,70 @@ function setStatus(title, text) {
   statusText.textContent = text;
 }
 
-function formatTime(seconds) {
-  if (seconds < 60) {
-    return `${seconds}s`;
+function formatTime(milliseconds) {
+  const totalTenths = Math.max(0, Math.round(milliseconds / 100));
+  const mins = Math.floor(totalTenths / 600);
+  const secs = Math.floor((totalTenths % 600) / 10);
+  const tenths = totalTenths % 10;
+
+  if (mins === 0) {
+    return `${secs}.${tenths}s`;
   }
 
-  const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
-  return `${mins}m ${String(secs).padStart(2, "0")}s`;
+  return `${mins}:${String(secs).padStart(2, "0")}.${tenths}`;
+}
+
+function loadLeaderboard() {
+  try {
+    const stored = window.localStorage.getItem(LEADERBOARD_STORAGE_KEY);
+    const parsed = stored ? JSON.parse(stored) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveLeaderboard() {
+  window.localStorage.setItem(LEADERBOARD_STORAGE_KEY, JSON.stringify(leaderboardEntries));
+}
+
+function renderLeaderboard() {
+  leaderboardList.innerHTML = "";
+
+  if (leaderboardEntries.length === 0) {
+    const emptyRow = document.createElement("li");
+    emptyRow.className = "leaderboard-empty";
+    emptyRow.textContent = "No honey runs yet. Win a round to engrave the leather board.";
+    leaderboardList.appendChild(emptyRow);
+    return;
+  }
+
+  leaderboardEntries.forEach((entry, index) => {
+    const item = document.createElement("li");
+    item.className = "leaderboard-entry";
+    item.innerHTML = `
+      <span class="leaderboard-rank">${index + 1}</span>
+      <span>
+        <span class="leaderboard-mode">${entry.mode}</span>
+        <span class="leaderboard-meta">${entry.board}</span>
+      </span>
+      <strong class="leaderboard-time">${formatTime(entry.timeMs)}</strong>
+    `;
+    leaderboardList.appendChild(item);
+  });
+}
+
+function recordWin() {
+  leaderboardEntries.push({
+    mode: boardState.config.name,
+    board: `${boardState.config.cols} x ${boardState.config.rows}`,
+    timeMs: Math.round(elapsedMs),
+  });
+
+  leaderboardEntries.sort((left, right) => left.timeMs - right.timeMs);
+  leaderboardEntries = leaderboardEntries.slice(0, 5);
+  saveLeaderboard();
+  renderLeaderboard();
 }
 
 function clearEffects() {
@@ -241,7 +303,7 @@ function showOverlay({ eyebrow, title, message, buttonLabel }) {
   resultEyebrow.textContent = eyebrow;
   resultTitle.textContent = title;
   resultMessage.textContent = message;
-  resultTime.textContent = formatTime(elapsedSeconds);
+  resultTime.textContent = formatTime(elapsedMs);
   resultBoard.textContent = `${boardState.config.cols} x ${boardState.config.rows}`;
   resultButton.textContent = buttonLabel;
   positionOverlayCard();
@@ -624,13 +686,14 @@ function animateQueenBee() {
 }
 
 function celebrateWin() {
+  recordWin();
   spawnParticles("win-spark", 32);
   spawnFireworks();
   animateQueenBee();
   showOverlay({
     eyebrow: "Hive cleared",
     title: "Sweet victory",
-    message: `Fantastic run. You cleared the whole honeycomb in ${formatTime(elapsedSeconds)}. The mother bee lays fresh eggs, and young bees soon spiral out into the world.`,
+    message: `Fantastic run. You cleared the whole honeycomb in ${formatTime(elapsedMs)}. The mother bee lays fresh eggs, and young bees soon spiral out into the world.`,
     buttonLabel: "Play Another Round",
   });
 }
@@ -640,7 +703,7 @@ function explodeHoney() {
   showOverlay({
     eyebrow: "Hive ruptured",
     title: "Honey everywhere",
-    message: `Boom. A hidden mine burst the comb after ${formatTime(elapsedSeconds)}. Shake it off and try again.`,
+    message: `Boom. A hidden mine burst the comb after ${formatTime(elapsedMs)}. Shake it off and try again.`,
     buttonLabel: "Try Again",
   });
 }
@@ -812,6 +875,8 @@ function revealCell(row, col) {
   if (cell.mine) {
     boardState.isGameOver = true;
     stopTimer();
+    elapsedMs = performance.now() - timerStartedAt;
+    timerElement.textContent = formatTime(elapsedMs);
     revealAllMines(row, col);
     setStatus("Hive breached", "A hidden mine detonated. Reset the board and try a cleaner route.");
     explodeHoney();
@@ -827,6 +892,8 @@ function revealCell(row, col) {
     boardState.isGameOver = true;
     boardState.hasWon = true;
     stopTimer();
+    elapsedMs = performance.now() - timerStartedAt;
+    timerElement.textContent = formatTime(elapsedMs);
     setStatus("Hive secured", `You cleared ${boardState.config.cols} x ${boardState.config.rows} without a blast.`);
     renderBoard();
     celebrateWin();
@@ -1008,11 +1075,12 @@ function renderBoard() {
 
 function startGame(config) {
   stopTimer();
-  elapsedSeconds = 0;
+  elapsedMs = 0;
+  timerStartedAt = 0;
   highlightedCell = null;
   clearEffects();
   hideOverlay();
-  timerElement.textContent = "0";
+  timerElement.textContent = formatTime(elapsedMs);
   boardState = createEmptyBoard(config);
   activeModeLabel.textContent = config.name;
   setStatus("Ready to sweep", "Left click reveals a hex. Right click plants a warning flag. Hover a number to see its six neighbors.");
@@ -1043,6 +1111,7 @@ createPresetButtons();
 updateCustomLabels();
 syncPresetSelection();
 createAmbientBees();
+renderLeaderboard();
 startGame(selectedConfig);
 window.addEventListener("resize", () => {
   if (boardState) {
