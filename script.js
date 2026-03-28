@@ -7,6 +7,7 @@ const presetConfigs = [
 ];
 
 const beeLayer = document.getElementById("bee-layer");
+const boardWrapper = document.getElementById("board-wrapper");
 const boardElement = document.getElementById("board");
 const presetGrid = document.getElementById("preset-grid");
 const mineCounter = document.getElementById("mine-counter");
@@ -29,10 +30,10 @@ const difficultySlider = document.getElementById("difficulty-slider");
 const sizeValue = document.getElementById("size-value");
 const difficultyValue = document.getElementById("difficulty-value");
 
-const HEX_SIZE = 40;
-const HEX_HEIGHT = HEX_SIZE * 0.92;
-const HORIZONTAL_STEP = HEX_SIZE * 0.75;
-const VERTICAL_STEP = HEX_HEIGHT;
+const BASE_HEX_SIZE = 40;
+const HEX_HEIGHT_RATIO = 0.92;
+const HORIZONTAL_STEP_RATIO = 0.75;
+const EXTRA_COLUMN_OFFSET_RATIO = HEX_HEIGHT_RATIO / 2;
 
 let selectedConfig = presetConfigs[0];
 let currentMode = "preset";
@@ -494,13 +495,44 @@ function getCellDisplay(cell) {
   return cell.adjacent > 0 ? String(cell.adjacent) : "";
 }
 
+function getBoardMetrics(config, hexSize) {
+  const hexHeight = hexSize * HEX_HEIGHT_RATIO;
+  const horizontalStep = hexSize * HORIZONTAL_STEP_RATIO;
+  const verticalStep = hexHeight;
+  const boardWidth = ((config.cols - 1) * horizontalStep) + hexSize;
+  const boardHeight = ((config.rows - 1) * verticalStep) + hexHeight + (config.cols > 1 ? hexHeight / 2 : 0);
+
+  return {
+    hexSize,
+    hexHeight,
+    horizontalStep,
+    verticalStep,
+    boardWidth,
+    boardHeight,
+  };
+}
+
+function getResponsiveHexSize(config) {
+  const wrapperStyles = window.getComputedStyle(boardWrapper);
+  const paddingX = parseFloat(wrapperStyles.paddingLeft) + parseFloat(wrapperStyles.paddingRight);
+  const paddingY = parseFloat(wrapperStyles.paddingTop) + parseFloat(wrapperStyles.paddingBottom);
+  const availableWidth = Math.max(boardWrapper.clientWidth - paddingX - 12, 180);
+  const availableHeight = Math.max(boardWrapper.clientHeight - paddingY - 12, 180);
+
+  const widthFactor = ((config.cols - 1) * HORIZONTAL_STEP_RATIO) + 1;
+  const heightFactor = ((config.rows - 1) * HEX_HEIGHT_RATIO) + HEX_HEIGHT_RATIO + (config.cols > 1 ? EXTRA_COLUMN_OFFSET_RATIO : 0);
+  const fitSize = Math.min(availableWidth / widthFactor, availableHeight / heightFactor);
+
+  return clamp(fitSize, 16, BASE_HEX_SIZE);
+}
+
 function renderBoard() {
   boardElement.innerHTML = "";
 
-  const boardWidth = ((boardState.config.cols - 1) * HORIZONTAL_STEP) + HEX_SIZE + 20;
-  const boardHeight = ((boardState.config.rows - 1) * VERTICAL_STEP) + HEX_HEIGHT + 20 + (boardState.config.cols > 1 ? HEX_HEIGHT / 2 : 0);
-  boardElement.style.width = `${boardWidth}px`;
-  boardElement.style.height = `${boardHeight}px`;
+  const metrics = getBoardMetrics(boardState.config, getResponsiveHexSize(boardState.config));
+  boardElement.style.width = `${metrics.boardWidth}px`;
+  boardElement.style.height = `${metrics.boardHeight}px`;
+  boardElement.style.setProperty("--hex-size", `${metrics.hexSize}px`);
 
   for (let row = 0; row < boardState.config.rows; row += 1) {
     for (let col = 0; col < boardState.config.cols; col += 1) {
@@ -512,8 +544,8 @@ function renderBoard() {
       button.setAttribute("aria-label", `Row ${row + 1}, Column ${col + 1}`);
       button.dataset.row = String(row);
       button.dataset.col = String(col);
-      button.style.left = `${10 + (col * HORIZONTAL_STEP)}px`;
-      button.style.top = `${10 + (row * VERTICAL_STEP) + (col % 2 === 1 ? HEX_HEIGHT / 2 : 0)}px`;
+      button.style.left = `${col * metrics.horizontalStep}px`;
+      button.style.top = `${(row * metrics.verticalStep) + (col % 2 === 1 ? metrics.hexHeight / 2 : 0)}px`;
       button.textContent = getCellDisplay(cell);
 
       if (cell.revealed) {
@@ -600,3 +632,8 @@ updateCustomLabels();
 syncPresetSelection();
 createAmbientBees();
 startGame(selectedConfig);
+window.addEventListener("resize", () => {
+  if (boardState) {
+    renderBoard();
+  }
+});
