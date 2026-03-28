@@ -323,14 +323,17 @@ function easeOutCubic(value) {
 function buildBabyBeeRoutes(eggCells, metrics) {
   const centerX = metrics.boardWidth / 2;
   const centerY = metrics.boardHeight / 2;
-  const outerRadiusX = (metrics.boardWidth / 2) + 340;
-  const outerRadiusY = (metrics.boardHeight / 2) + 260;
+  const viewportWidth = window.innerWidth;
+  const viewportHeight = window.innerHeight;
+  const boardRect = boardElement.getBoundingClientRect();
   const sortedEggs = eggCells
     .map((cell) => {
-      const startX = (cell.col * metrics.horizontalStep) + (metrics.hexSize * 0.3);
-      const startY = (cell.row * metrics.verticalStep) + (cell.col % 2 === 1 ? metrics.hexHeight / 2 : 0) + (metrics.hexHeight * 0.25);
-      const angle = Math.atan2(startY - centerY, startX - centerX);
-      return { ...cell, startX, startY, angle };
+      const localX = (cell.col * metrics.horizontalStep) + (metrics.hexSize * 0.3);
+      const localY = (cell.row * metrics.verticalStep) + (cell.col % 2 === 1 ? metrics.hexHeight / 2 : 0) + (metrics.hexHeight * 0.25);
+      const startX = boardRect.left + localX;
+      const startY = boardRect.top + localY;
+      const angle = Math.atan2(localY - centerY, localX - centerX);
+      return { ...cell, startX, startY, localX, localY, angle };
     })
     .sort((left, right) => left.angle - right.angle);
 
@@ -338,8 +341,9 @@ function buildBabyBeeRoutes(eggCells, metrics) {
 
   return sortedEggs.map((egg, index) => {
     const laneAngle = (-Math.PI) + ((index + 0.5) / count * Math.PI * 2);
-    const exitX = centerX + (Math.cos(laneAngle) * outerRadiusX);
-    const exitY = centerY + (Math.sin(laneAngle) * outerRadiusY);
+    const travelDistance = Math.max(viewportWidth, viewportHeight) + 220;
+    const exitX = egg.startX + (Math.cos(laneAngle) * travelDistance);
+    const exitY = egg.startY + (Math.sin(laneAngle) * travelDistance);
     const tangentX = -Math.sin(laneAngle);
     const tangentY = Math.cos(laneAngle);
     const outwardX = Math.cos(laneAngle);
@@ -349,8 +353,8 @@ function buildBabyBeeRoutes(eggCells, metrics) {
       y: egg.startY + (tangentY * (36 + (index % 5) * 6)) + (outwardY * 18),
     };
     const controlB = {
-      x: centerX + (outwardX * (outerRadiusX * 0.52)) + (tangentX * (52 + (index % 7) * 8)),
-      y: centerY + (outwardY * (outerRadiusY * 0.52)) + (tangentY * (52 + (index % 7) * 8)),
+      x: egg.startX + (outwardX * (travelDistance * 0.58)) + (tangentX * (52 + (index % 7) * 8)),
+      y: egg.startY + (outwardY * (travelDistance * 0.58)) + (tangentY * (52 + (index % 7) * 8)),
     };
 
     return {
@@ -360,7 +364,7 @@ function buildBabyBeeRoutes(eggCells, metrics) {
       controlA,
       controlB,
       end: { x: exitX, y: exitY },
-      duration: 3000 + (index % 6) * 170,
+      duration: 3800 + (index % 6) * 220,
       delay: index * 70,
       startScale: 0.5,
       endScale: 1,
@@ -376,7 +380,7 @@ function animateBabyBeeFlight(route) {
   babyBee.className = "baby-bee";
   babyBee.style.left = "0";
   babyBee.style.top = "0";
-  boardElement.appendChild(babyBee);
+  fxLayer.appendChild(babyBee);
 
   let animationStart = null;
 
