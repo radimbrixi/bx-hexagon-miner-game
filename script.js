@@ -18,7 +18,9 @@ const activeModeLabel = document.getElementById("active-mode-label");
 const resetButton = document.getElementById("reset-button");
 const customStartButton = document.getElementById("custom-start-button");
 const fxLayer = document.getElementById("fx-layer");
+const hatchLayer = document.getElementById("hatch-layer");
 const resultOverlay = document.getElementById("result-overlay");
+const resultCard = document.getElementById("result-card");
 const resultEyebrow = document.getElementById("result-eyebrow");
 const resultTitle = document.getElementById("result-title");
 const resultMessage = document.getElementById("result-message");
@@ -159,6 +161,7 @@ function formatTime(seconds) {
 
 function clearEffects() {
   fxLayer.innerHTML = "";
+  hatchLayer.innerHTML = "";
   if (overlayTimeoutId) {
     clearTimeout(overlayTimeoutId);
     overlayTimeoutId = null;
@@ -197,6 +200,41 @@ function createAmbientBees() {
 function hideOverlay() {
   resultOverlay.classList.remove("visible");
   resultOverlay.setAttribute("aria-hidden", "true");
+  resultCard.classList.remove("overlay-left");
+  resultCard.style.removeProperty("--overlay-left");
+  resultCard.style.removeProperty("--overlay-top");
+  resultCard.style.removeProperty("--overlay-shift-x");
+  resultCard.style.removeProperty("--overlay-shift-y");
+}
+
+function positionOverlayCard() {
+  resultCard.classList.remove("overlay-left");
+  resultCard.style.removeProperty("--overlay-left");
+  resultCard.style.removeProperty("--overlay-top");
+  resultCard.style.removeProperty("--overlay-shift-x");
+  resultCard.style.removeProperty("--overlay-shift-y");
+
+  if (!boardState) {
+    return;
+  }
+
+  const margin = 24;
+  const gap = 22;
+  const boardRect = boardWrapper.getBoundingClientRect();
+  const cardWidth = Math.min(540, window.innerWidth - (margin * 2));
+  const preferredLeft = boardRect.left - cardWidth - gap;
+  const centeredTop = clamp((boardRect.top + (boardRect.height / 2)), margin, window.innerHeight - margin);
+
+  if (preferredLeft >= margin) {
+    resultCard.classList.add("overlay-left");
+    resultCard.style.setProperty("--overlay-left", `${preferredLeft}px`);
+    resultCard.style.setProperty("--overlay-top", `${centeredTop}px`);
+    resultCard.style.setProperty("--overlay-shift-y", "-50%");
+    return;
+  }
+
+  resultCard.style.setProperty("--overlay-shift-x", "-50%");
+  resultCard.style.setProperty("--overlay-shift-y", "-50%");
 }
 
 function showOverlay({ eyebrow, title, message, buttonLabel }) {
@@ -206,6 +244,7 @@ function showOverlay({ eyebrow, title, message, buttonLabel }) {
   resultTime.textContent = formatTime(elapsedSeconds);
   resultBoard.textContent = `${boardState.config.cols} x ${boardState.config.rows}`;
   resultButton.textContent = buttonLabel;
+  positionOverlayCard();
   resultOverlay.classList.add("visible");
   resultOverlay.setAttribute("aria-hidden", "false");
 }
@@ -380,7 +419,7 @@ function animateBabyBeeFlight(route) {
   babyBee.className = "baby-bee";
   babyBee.style.left = "0";
   babyBee.style.top = "0";
-  fxLayer.appendChild(babyBee);
+  hatchLayer.appendChild(babyBee);
 
   let animationStart = null;
   let hatchTriggered = false;
@@ -1008,5 +1047,8 @@ startGame(selectedConfig);
 window.addEventListener("resize", () => {
   if (boardState) {
     renderBoard();
+  }
+  if (resultOverlay.classList.contains("visible")) {
+    positionOverlayCard();
   }
 });

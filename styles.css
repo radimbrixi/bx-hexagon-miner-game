@@ -46,6 +46,7 @@ body::before {
 
 .bee-layer,
 .fx-layer,
+.hatch-layer,
 .result-overlay {
   position: fixed;
   inset: 0;
@@ -60,6 +61,11 @@ body::before {
 .fx-layer {
   overflow: hidden;
   z-index: 60;
+}
+
+.hatch-layer {
+  overflow: hidden;
+  z-index: 45;
 }
 
 .bee {
@@ -183,6 +189,7 @@ body::before {
 
 .result-card {
   width: min(540px, 100%);
+  max-width: min(540px, calc(100vw - 48px));
   padding: 28px;
   border-radius: 28px;
   border: 1px solid rgba(255, 224, 142, 0.3);
@@ -193,11 +200,25 @@ body::before {
   text-align: center;
   transform: translateY(24px) scale(0.96);
   transition: transform 260ms cubic-bezier(.2,.8,.2,1);
-  position: relative;
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  margin: 0;
+  transform: translate(-50%, calc(-50% + 24px)) scale(0.96);
 }
 
 .result-overlay.visible .result-card {
-  transform: translateY(0) scale(1);
+  transform: translate(var(--overlay-shift-x, -50%), var(--overlay-shift-y, -50%)) scale(1);
+}
+
+.result-card.overlay-left {
+  left: var(--overlay-left, 24px);
+  top: var(--overlay-top, 50%);
+  transform: translate(0, calc(var(--overlay-shift-y, -50%) + 24px)) scale(0.96);
+}
+
+.result-overlay.visible .result-card.overlay-left {
+  transform: translate(0, var(--overlay-shift-y, -50%)) scale(1);
 }
 
 .result-card h2 {
