@@ -306,10 +306,12 @@ body::before {
   width: 10px;
   height: 10px;
   border-radius: 50%;
+  opacity: 0;
   background: radial-gradient(circle at center, #fffced 0 25%, var(--burst-color) 45%, rgba(255,255,255,0) 70%);
   box-shadow: 0 0 18px color-mix(in srgb, var(--burst-color) 70%, white 30%);
   animation-name: fireworkBurst;
   animation-timing-function: cubic-bezier(.16,.84,.22,1);
+  animation-fill-mode: both;
 }
 
 .hex-cell.egged::after {
