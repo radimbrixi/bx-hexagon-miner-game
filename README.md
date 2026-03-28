@@ -1,3 +1,7 @@
-# bx-hexagon-miner-game
+# BX Hexagon Miner Game
 
-Starter repository for the `bx-hexagon-miner-game` project.
+A vanilla HTML, CSS, and JavaScript take on Minesweeper with a hexagonal honeycomb board, five preset level sizes, and a custom mode with sliders for board size and difficulty.
+
+## Run
+
+Open `index.html` in a browser.

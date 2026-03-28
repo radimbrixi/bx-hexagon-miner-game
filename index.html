@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BX Hexagon Miner Game</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Changa:wght@400;500;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="page-shell">
+    <header class="hero-card">
+      <div class="hero-copy">
+        <p class="eyebrow">Honeycomb Hazard Puzzle</p>
+        <h1>BX Hexagon Miner Game</h1>
+        <p class="intro">
+          A modern hex-based spin on the classic minefield challenge. Sweep a warm honeycomb,
+          mark hidden hazards, and clear every safe cell without triggering a blast.
+        </p>
+      </div>
+      <div class="hero-stats">
+        <div class="badge-panel">
+          <span class="badge-label">Mode</span>
+          <strong id="active-mode-label">Starter Hive</strong>
+        </div>
+        <div class="badge-panel">
+          <span class="badge-label">Best Tactic</span>
+          <strong>Right-click to flag</strong>
+        </div>
+      </div>
+    </header>
+
+    <main class="app-grid">
+      <section class="control-card">
+        <div class="section-heading">
+          <p class="eyebrow">Level Select</p>
+          <h2>Choose Your Hive</h2>
+        </div>
+
+        <div class="preset-grid" id="preset-grid"></div>
+
+        <div class="custom-panel">
+          <div class="custom-headline">
+            <div>
+              <p class="eyebrow">Custom Hive</p>
+              <h3>Shape Your Own Board</h3>
+            </div>
+            <button id="custom-start-button" class="accent-button">Build Custom Game</button>
+          </div>
+
+          <label class="slider-row" for="size-slider">
+            <span>Playable Area</span>
+            <strong id="size-value">10 x 10</strong>
+          </label>
+          <input id="size-slider" type="range" min="6" max="16" value="10">
+
+          <label class="slider-row" for="difficulty-slider">
+            <span>Difficulty</span>
+            <strong id="difficulty-value">18%</strong>
+          </label>
+          <input id="difficulty-slider" type="range" min="10" max="32" value="18">
+        </div>
+      </section>
+
+      <section class="board-card">
+        <div class="hud">
+          <div class="hud-item">
+            <span class="hud-label">Mines</span>
+            <strong id="mine-counter">0</strong>
+          </div>
+          <button id="reset-button" class="reset-button" aria-label="Start a new game">New Game</button>
+          <div class="hud-item">
+            <span class="hud-label">Time</span>
+            <strong id="timer">0</strong>
+          </div>
+        </div>
+
+        <div class="status-strip">
+          <div class="status-copy">
+            <p class="eyebrow">Mission Status</p>
+            <strong id="status-title">Ready to sweep</strong>
+            <span id="status-text">Select a hive and reveal the first safe hex.</span>
+          </div>
+          <div class="legend">
+            <span><i class="legend-swatch safe"></i>Reveal</span>
+            <span><i class="legend-swatch warn"></i>Flag</span>
+            <span><i class="legend-swatch mine"></i>Mine</span>
+          </div>
+        </div>
+
+        <div id="board-wrapper" class="board-wrapper">
+          <div id="board" class="board" aria-label="Game board" role="grid"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
