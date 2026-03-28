@@ -283,6 +283,50 @@ body::before {
   animation: eggPop 340ms ease;
 }
 
+.hex-cell.hatched::after {
+  animation: eggFade 240ms ease forwards;
+}
+
+.baby-bee {
+  position: absolute;
+  width: 16px;
+  height: 10px;
+  z-index: 6;
+  pointer-events: none;
+  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.22));
+  animation: hatchSpiral var(--flight-duration) ease-out forwards;
+}
+
+.baby-bee::before,
+.baby-bee::after {
+  content: "";
+  position: absolute;
+}
+
+.baby-bee::before {
+  inset: 2px 1px 0;
+  border-radius: 999px;
+  background:
+    linear-gradient(90deg,
+      #241203 0 12%,
+      #ffd65a 12% 34%,
+      #2a1806 34% 52%,
+      #ffd65a 52% 74%,
+      #2a1806 74% 88%,
+      #ffd65a 88% 100%);
+}
+
+.baby-bee::after {
+  width: 6px;
+  height: 6px;
+  top: -3px;
+  left: 4px;
+  border-radius: 50% 50% 50% 18%;
+  background: rgba(243, 251, 255, 0.76);
+  box-shadow: 4px 1px 0 0 rgba(243, 251, 255, 0.68);
+  animation: wingBuzz 120ms infinite ease-in-out alternate;
+}
+
 .mother-bee {
   position: absolute;
   width: 48px;
@@ -381,6 +425,37 @@ body::before {
   100% {
     transform: scale(1);
     opacity: 1;
+  }
+}
+
+@keyframes eggFade {
+  from {
+    transform: scale(1);
+    opacity: 1;
+  }
+  to {
+    transform: scale(0.65);
+    opacity: 0;
+  }
+}
+
+@keyframes hatchSpiral {
+  0% {
+    transform: translate3d(0, 0, 0) rotate(0deg) scale(0.45);
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  55% {
+    transform: translate3d(calc(var(--spiral-x) * 0.45), calc(var(--spiral-y) * 0.45), 0)
+      rotate(calc(var(--spin-turns) * 0.45turn)) scale(0.9);
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(var(--spiral-x), var(--spiral-y), 0)
+      rotate(calc(var(--spin-turns) * 1turn)) scale(1.05);
+    opacity: 0;
   }
 }
 

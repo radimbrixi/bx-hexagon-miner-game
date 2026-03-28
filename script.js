@@ -43,6 +43,7 @@ let highlightedCell = null;
 let overlayTimeoutId = null;
 let queenBeeFrameId = null;
 let queenBeeTimeoutId = null;
+let hatchTimeoutId = null;
 
 const beeConfigs = [
   { edge: "top", duration: 36, delay: 0, scale: 1.0 },
@@ -168,6 +169,10 @@ function clearEffects() {
     clearTimeout(queenBeeTimeoutId);
     queenBeeTimeoutId = null;
   }
+  if (hatchTimeoutId) {
+    clearTimeout(hatchTimeoutId);
+    hatchTimeoutId = null;
+  }
 }
 
 function createAmbientBees() {
@@ -281,6 +286,55 @@ function markEggAt(row, col) {
   }
 }
 
+function hatchYoungBees() {
+  const eggCells = [];
+
+  for (let row = 0; row < boardState.config.rows; row += 1) {
+    for (let col = 0; col < boardState.config.cols; col += 1) {
+      const cell = boardState.cells[row][col];
+      if (cell.egged && !cell.mine) {
+        cell.hatched = true;
+        eggCells.push({ row, col });
+      }
+    }
+  }
+
+  const buttons = boardElement.querySelectorAll(".hex-cell.egged");
+  for (const button of buttons) {
+    button.classList.add("hatched");
+  }
+
+  const metrics = getBoardMetrics(boardState.config, getActiveHexSize());
+  const centerX = metrics.boardWidth / 2;
+  const centerY = metrics.boardHeight / 2;
+
+  eggCells.forEach(({ row, col }, index) => {
+    const babyBee = document.createElement("div");
+    babyBee.className = "baby-bee";
+    const startX = (col * metrics.horizontalStep) + (metrics.hexSize * 0.3);
+    const startY = (row * metrics.verticalStep) + (col % 2 === 1 ? metrics.hexHeight / 2 : 0) + (metrics.hexHeight * 0.25);
+    const dx = startX - centerX;
+    const dy = startY - centerY;
+    const length = Math.hypot(dx, dy) || 1;
+    const normalizedX = dx / length;
+    const normalizedY = dy / length;
+    const distance = 90 + Math.random() * 210;
+    const spiralX = (normalizedX * distance) + ((Math.random() - 0.5) * 80);
+    const spiralY = (normalizedY * distance) + ((Math.random() - 0.5) * 80);
+
+    babyBee.style.left = `${startX}px`;
+    babyBee.style.top = `${startY}px`;
+    babyBee.style.setProperty("--spiral-x", `${spiralX}px`);
+    babyBee.style.setProperty("--spiral-y", `${spiralY}px`);
+    babyBee.style.setProperty("--spin-turns", `${1.4 + Math.random() * 1.6}`);
+    babyBee.style.setProperty("--flight-duration", `${1500 + Math.random() * 1200}ms`);
+    babyBee.style.animationDelay = `${index * 18}ms`;
+
+    boardElement.appendChild(babyBee);
+    babyBee.addEventListener("animationend", () => babyBee.remove(), { once: true });
+  });
+}
+
 function animateQueenBee() {
   const safeCells = getSafeCellsForEggs();
   if (safeCells.length === 0) {
@@ -354,10 +408,14 @@ function celebrateWin() {
   spawnParticles("win-spark", 32);
   spawnFireworks();
   animateQueenBee();
+  hatchTimeoutId = window.setTimeout(() => {
+    hatchYoungBees();
+    hatchTimeoutId = null;
+  }, 2400);
   showOverlay({
     eyebrow: "Hive cleared",
     title: "Sweet victory",
-    message: `Fantastic run. You cleared the whole honeycomb in ${formatTime(elapsedSeconds)}, and the mother bee is laying fresh eggs in the safe comb.`,
+    message: `Fantastic run. You cleared the whole honeycomb in ${formatTime(elapsedSeconds)}. The mother bee lays fresh eggs, and young bees soon spiral out into the world.`,
     buttonLabel: "Play Another Round",
   });
 }
@@ -411,14 +469,15 @@ function createEmptyBoard(config) {
     const rowCells = [];
     for (let col = 0; col < config.cols; col += 1) {
       rowCells.push({
-      row,
-      col,
-      mine: false,
-      adjacent: 0,
-      revealed: false,
-      flagged: false,
-      egged: false,
-    });
+        row,
+        col,
+        mine: false,
+        adjacent: 0,
+        revealed: false,
+        flagged: false,
+        egged: false,
+        hatched: false,
+      });
     }
     cells.push(rowCells);
   }
@@ -687,6 +746,12 @@ function renderBoard() {
       }
       if (cell.revealed && !cell.mine && cell.adjacent === 0) {
         button.classList.add("safe-zero");
+      }
+      if (cell.egged) {
+        button.classList.add("egged");
+      }
+      if (cell.hatched) {
+        button.classList.add("hatched");
       }
       if (cell.revealed && cell.adjacent > 0) {
         button.classList.add(`n${Math.min(cell.adjacent, 6)}`);
