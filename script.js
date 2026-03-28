@@ -15,6 +15,14 @@ const statusText = document.getElementById("status-text");
 const activeModeLabel = document.getElementById("active-mode-label");
 const resetButton = document.getElementById("reset-button");
 const customStartButton = document.getElementById("custom-start-button");
+const fxLayer = document.getElementById("fx-layer");
+const resultOverlay = document.getElementById("result-overlay");
+const resultEyebrow = document.getElementById("result-eyebrow");
+const resultTitle = document.getElementById("result-title");
+const resultMessage = document.getElementById("result-message");
+const resultTime = document.getElementById("result-time");
+const resultBoard = document.getElementById("result-board");
+const resultButton = document.getElementById("result-button");
 const sizeSlider = document.getElementById("size-slider");
 const difficultySlider = document.getElementById("difficulty-slider");
 const sizeValue = document.getElementById("size-value");
@@ -31,6 +39,7 @@ let boardState = null;
 let timerId = null;
 let elapsedSeconds = 0;
 let highlightedCell = null;
+let overlayTimeoutId = null;
 
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
@@ -121,6 +130,90 @@ function startTimer() {
 function setStatus(title, text) {
   statusTitle.textContent = title;
   statusText.textContent = text;
+}
+
+function formatTime(seconds) {
+  if (seconds < 60) {
+    return `${seconds}s`;
+  }
+
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${mins}m ${String(secs).padStart(2, "0")}s`;
+}
+
+function clearEffects() {
+  fxLayer.innerHTML = "";
+  if (overlayTimeoutId) {
+    clearTimeout(overlayTimeoutId);
+    overlayTimeoutId = null;
+  }
+}
+
+function hideOverlay() {
+  resultOverlay.classList.remove("visible");
+  resultOverlay.setAttribute("aria-hidden", "true");
+}
+
+function showOverlay({ eyebrow, title, message, buttonLabel }) {
+  resultEyebrow.textContent = eyebrow;
+  resultTitle.textContent = title;
+  resultMessage.textContent = message;
+  resultTime.textContent = formatTime(elapsedSeconds);
+  resultBoard.textContent = `${boardState.config.cols} x ${boardState.config.rows}`;
+  resultButton.textContent = buttonLabel;
+  resultOverlay.classList.add("visible");
+  resultOverlay.setAttribute("aria-hidden", "false");
+}
+
+function spawnParticles(type, count) {
+  clearEffects();
+
+  for (let index = 0; index < count; index += 1) {
+    const particle = document.createElement("div");
+    particle.className = `particle ${type}`;
+    const size = type === "honey-drop"
+      ? 10 + Math.random() * 28
+      : 14 + Math.random() * 18;
+    const left = Math.random() * 100;
+    const driftX = `${(Math.random() - 0.5) * (type === "honey-drop" ? 260 : 180)}px`;
+    const duration = type === "honey-drop"
+      ? 1200 + Math.random() * 900
+      : 700 + Math.random() * 500;
+    const delay = Math.random() * 180;
+
+    particle.style.width = `${size}px`;
+    particle.style.height = `${size * (type === "honey-drop" ? 1.25 : 1)}px`;
+    particle.style.left = `${left}vw`;
+    particle.style.animationDuration = `${duration}ms`;
+    particle.style.animationDelay = `${delay}ms`;
+    particle.style.setProperty("--drift-x", driftX);
+    particle.style.setProperty("--particle-scale", `${0.75 + Math.random() * 1.3}`);
+    particle.style.setProperty("--rise-y", `${80 + Math.random() * 160}px`);
+
+    fxLayer.appendChild(particle);
+    particle.addEventListener("animationend", () => particle.remove(), { once: true });
+  }
+}
+
+function celebrateWin() {
+  spawnParticles("win-spark", 26);
+  showOverlay({
+    eyebrow: "Hive cleared",
+    title: "Sweet victory",
+    message: `Fantastic run. You cleared the whole honeycomb in ${formatTime(elapsedSeconds)}.`,
+    buttonLabel: "Play Another Round",
+  });
+}
+
+function explodeHoney() {
+  spawnParticles("honey-drop", 42);
+  showOverlay({
+    eyebrow: "Hive ruptured",
+    title: "Honey everywhere",
+    message: `Boom. A hidden mine burst the comb after ${formatTime(elapsedSeconds)}. Shake it off and try again.`,
+    buttonLabel: "Try Again",
+  });
 }
 
 function updateHighlights() {
@@ -289,6 +382,7 @@ function revealCell(row, col) {
     stopTimer();
     revealAllMines(row, col);
     setStatus("Hive breached", "A hidden mine detonated. Reset the board and try a cleaner route.");
+    explodeHoney();
     renderBoard();
     return;
   }
@@ -302,6 +396,7 @@ function revealCell(row, col) {
     boardState.hasWon = true;
     stopTimer();
     setStatus("Hive secured", `You cleared ${boardState.config.cols} x ${boardState.config.rows} without a blast.`);
+    celebrateWin();
   } else {
     setStatus("Sweep in progress", "Clear safe cells and flag the suspicious hexes.");
   }
@@ -451,6 +546,8 @@ function startGame(config) {
   stopTimer();
   elapsedSeconds = 0;
   highlightedCell = null;
+  clearEffects();
+  hideOverlay();
   timerElement.textContent = "0";
   boardState = createEmptyBoard(config);
   activeModeLabel.textContent = config.name;
@@ -470,6 +567,10 @@ customStartButton.addEventListener("click", () => {
 
 sizeSlider.addEventListener("input", updateCustomLabels);
 difficultySlider.addEventListener("input", updateCustomLabels);
+resultButton.addEventListener("click", () => {
+  hideOverlay();
+  startGame(currentMode === "custom" ? buildCustomConfig() : selectedConfig);
+});
 
 createPresetButtons();
 updateCustomLabels();

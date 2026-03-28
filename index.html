@@ -10,6 +10,25 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+  <div id="fx-layer" class="fx-layer" aria-hidden="true"></div>
+  <div id="result-overlay" class="result-overlay" aria-hidden="true">
+    <div class="result-card">
+      <p class="eyebrow" id="result-eyebrow">Hive complete</p>
+      <h2 id="result-title">Sweet victory</h2>
+      <p id="result-message" class="result-message"></p>
+      <div class="result-stats">
+        <div class="result-stat">
+          <span class="badge-label">Time</span>
+          <strong id="result-time">0s</strong>
+        </div>
+        <div class="result-stat">
+          <span class="badge-label">Board</span>
+          <strong id="result-board">8 x 8</strong>
+        </div>
+      </div>
+      <button id="result-button" class="accent-button" type="button">Play Again</button>
+    </div>
+  </div>
   <div class="page-shell">
     <header class="hero-card">
       <div class="hero-copy">
