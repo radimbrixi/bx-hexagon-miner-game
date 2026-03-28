@@ -383,6 +383,26 @@ function animateBabyBeeFlight(route) {
   fxLayer.appendChild(babyBee);
 
   let animationStart = null;
+  let hatchTriggered = false;
+
+  function triggerIndividualHatch() {
+    if (hatchTriggered) {
+      return;
+    }
+
+    hatchTriggered = true;
+    const cell = boardState?.cells?.[route.row]?.[route.col];
+    if (cell) {
+      cell.hatched = true;
+      cell.shellOpen = true;
+    }
+
+    const selector = `.hex-cell[data-row="${route.row}"][data-col="${route.col}"]`;
+    const button = boardElement.querySelector(selector);
+    if (button) {
+      button.classList.add("hatched", "shell-open");
+    }
+  }
 
   function step(timestamp) {
     if (!animationStart) {
@@ -394,6 +414,8 @@ function animateBabyBeeFlight(route) {
       babyBeeFrameIds.push(frameId);
       return;
     }
+
+    triggerIndividualHatch();
 
     const linearProgress = Math.min((timestamp - animationStart) / route.duration, 1);
     const progress = easeOutCubic(linearProgress);
@@ -430,17 +452,9 @@ function hatchYoungBees() {
     for (let col = 0; col < boardState.config.cols; col += 1) {
       const cell = boardState.cells[row][col];
       if (cell.egged && !cell.mine) {
-        cell.hatched = true;
-        cell.shellOpen = true;
         eggCells.push({ row, col });
       }
     }
-  }
-
-  const buttons = boardElement.querySelectorAll(".hex-cell.egged");
-  for (const button of buttons) {
-    button.classList.add("hatched");
-    button.classList.add("shell-open");
   }
 
   const metrics = getBoardMetrics(boardState.config, getActiveHexSize());
