@@ -282,7 +282,7 @@ function spawnParticles(type, count) {
 function spawnFireworks() {
   const colors = ["#ffd75e", "#ff8a5b", "#fff0a6", "#8ae3ff", "#ff9fd2"];
 
-  for (let burst = 0; burst < 7; burst += 1) {
+  for (let burst = 0; burst < 70; burst += 1) {
     const centerX = 14 + Math.random() * 72;
     const centerY = 10 + Math.random() * 42;
 
@@ -293,7 +293,7 @@ function spawnFireworks() {
       const distance = 36 + Math.random() * 84;
       particle.style.left = `${centerX}vw`;
       particle.style.top = `${centerY}vh`;
-      particle.style.animationDuration = `${900 + Math.random() * 500}ms`;
+      particle.style.animationDuration = `${1100 + Math.random() * 650}ms`;
       particle.style.animationDelay = `${burst * 140 + Math.random() * 120}ms`;
       particle.style.setProperty("--burst-x", `${Math.cos(angle) * distance}px`);
       particle.style.setProperty("--burst-y", `${Math.sin(angle) * distance}px`);
