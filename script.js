@@ -3,7 +3,7 @@ const presetConfigs = [
   { id: "scout", name: "Scout Comb", cols: 10, rows: 10, mineRatio: 0.17, tag: "Warm" },
   { id: "worker", name: "Worker Nest", cols: 13, rows: 13, mineRatio: 0.19, tag: "Alert" },
   { id: "queen", name: "Queen Chamber", cols: 17, rows: 17, mineRatio: 0.22, tag: "Sharp" },
-  { id: "storm", name: "Storm Swarm", cols: 22, rows: 22, mineRatio: 0.25, tag: "Brutal" },
+  { id: "storm", name: "Storm Swarm", cols: 24, rows: 13, mineRatio: 0.25, tag: "Brutal" },
 ];
 
 const beeLayer = document.getElementById("bee-layer");
@@ -33,7 +33,6 @@ const difficultyValue = document.getElementById("difficulty-value");
 const BASE_HEX_SIZE = 40;
 const HEX_HEIGHT_RATIO = 0.92;
 const HORIZONTAL_STEP_RATIO = 0.75;
-const EXTRA_COLUMN_OFFSET_RATIO = HEX_HEIGHT_RATIO / 2;
 
 let selectedConfig = presetConfigs[0];
 let currentMode = "preset";
@@ -512,24 +511,14 @@ function getBoardMetrics(config, hexSize) {
   };
 }
 
-function getResponsiveHexSize(config) {
-  const wrapperStyles = window.getComputedStyle(boardWrapper);
-  const paddingX = parseFloat(wrapperStyles.paddingLeft) + parseFloat(wrapperStyles.paddingRight);
-  const paddingY = parseFloat(wrapperStyles.paddingTop) + parseFloat(wrapperStyles.paddingBottom);
-  const availableWidth = Math.max(boardWrapper.clientWidth - paddingX - 12, 180);
-  const availableHeight = Math.max(boardWrapper.clientHeight - paddingY - 12, 180);
-
-  const widthFactor = ((config.cols - 1) * HORIZONTAL_STEP_RATIO) + 1;
-  const heightFactor = ((config.rows - 1) * HEX_HEIGHT_RATIO) + HEX_HEIGHT_RATIO + (config.cols > 1 ? EXTRA_COLUMN_OFFSET_RATIO : 0);
-  const fitSize = Math.min(availableWidth / widthFactor, availableHeight / heightFactor);
-
-  return clamp(fitSize, 16, BASE_HEX_SIZE);
+function getActiveHexSize() {
+  return window.innerWidth <= 720 ? 34 : BASE_HEX_SIZE;
 }
 
 function renderBoard() {
   boardElement.innerHTML = "";
 
-  const metrics = getBoardMetrics(boardState.config, getResponsiveHexSize(boardState.config));
+  const metrics = getBoardMetrics(boardState.config, getActiveHexSize());
   boardElement.style.width = `${metrics.boardWidth}px`;
   boardElement.style.height = `${metrics.boardHeight}px`;
   boardElement.style.setProperty("--hex-size", `${metrics.hexSize}px`);
