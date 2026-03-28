@@ -25,6 +25,7 @@ const resultMessage = document.getElementById("result-message");
 const resultTime = document.getElementById("result-time");
 const resultBoard = document.getElementById("result-board");
 const resultButton = document.getElementById("result-button");
+const resultCloseButton = document.getElementById("result-close-button");
 const sizeSlider = document.getElementById("size-slider");
 const difficultySlider = document.getElementById("difficulty-slider");
 const sizeValue = document.getElementById("size-value");
@@ -294,6 +295,7 @@ function hatchYoungBees() {
       const cell = boardState.cells[row][col];
       if (cell.egged && !cell.mine) {
         cell.hatched = true;
+        cell.shellOpen = true;
         eggCells.push({ row, col });
       }
     }
@@ -302,6 +304,7 @@ function hatchYoungBees() {
   const buttons = boardElement.querySelectorAll(".hex-cell.egged");
   for (const button of buttons) {
     button.classList.add("hatched");
+    button.classList.add("shell-open");
   }
 
   const metrics = getBoardMetrics(boardState.config, getActiveHexSize());
@@ -392,6 +395,10 @@ function animateQueenBee() {
           markEggAt(eggTarget.row, eggTarget.col);
         }
 
+        hatchTimeoutId = window.setTimeout(() => {
+          hatchYoungBees();
+          hatchTimeoutId = null;
+        }, 1100);
         queenBeeTimeoutId = window.setTimeout(() => queenBee.remove(), 900);
         queenBeeFrameId = null;
         return;
@@ -408,10 +415,6 @@ function celebrateWin() {
   spawnParticles("win-spark", 32);
   spawnFireworks();
   animateQueenBee();
-  hatchTimeoutId = window.setTimeout(() => {
-    hatchYoungBees();
-    hatchTimeoutId = null;
-  }, 2400);
   showOverlay({
     eyebrow: "Hive cleared",
     title: "Sweet victory",
@@ -477,6 +480,7 @@ function createEmptyBoard(config) {
         flagged: false,
         egged: false,
         hatched: false,
+        shellOpen: false,
       });
     }
     cells.push(rowCells);
@@ -753,6 +757,9 @@ function renderBoard() {
       if (cell.hatched) {
         button.classList.add("hatched");
       }
+      if (cell.shellOpen) {
+        button.classList.add("shell-open");
+      }
       if (cell.revealed && cell.adjacent > 0) {
         button.classList.add(`n${Math.min(cell.adjacent, 6)}`);
       }
@@ -815,6 +822,9 @@ difficultySlider.addEventListener("input", updateCustomLabels);
 resultButton.addEventListener("click", () => {
   hideOverlay();
   startGame(currentMode === "custom" ? buildCustomConfig() : selectedConfig);
+});
+resultCloseButton.addEventListener("click", () => {
+  hideOverlay();
 });
 
 createPresetButtons();

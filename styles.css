@@ -193,6 +193,7 @@ body::before {
   text-align: center;
   transform: translateY(24px) scale(0.96);
   transition: transform 260ms cubic-bezier(.2,.8,.2,1);
+  position: relative;
 }
 
 .result-overlay.visible .result-card {
@@ -237,6 +238,23 @@ body::before {
 .result-card .accent-button {
   margin-top: 22px;
   min-width: 180px;
+  pointer-events: auto;
+}
+
+.result-close-button {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 38px;
+  height: 38px;
+  border: 1px solid rgba(255, 224, 142, 0.24);
+  border-radius: 50%;
+  background: rgba(255, 210, 104, 0.1);
+  color: var(--text);
+  font-family: "Changa", sans-serif;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
   pointer-events: auto;
 }
 
@@ -285,6 +303,29 @@ body::before {
 
 .hex-cell.hatched::after {
   animation: eggFade 240ms ease forwards;
+}
+
+.hex-cell.shell-open::before,
+.hex-cell.shell-open::after {
+  content: "";
+  position: absolute;
+  width: 22%;
+  height: 18%;
+  bottom: 24%;
+  background: linear-gradient(180deg, #fff9df, #e2bf58);
+  box-shadow: 0 1px 0 rgba(121, 79, 13, 0.18);
+}
+
+.hex-cell.shell-open::before {
+  left: 25%;
+  border-radius: 40% 60% 60% 50%;
+  transform: rotate(-22deg);
+}
+
+.hex-cell.shell-open::after {
+  right: 25%;
+  border-radius: 60% 40% 50% 60%;
+  transform: rotate(22deg);
 }
 
 .baby-bee {
