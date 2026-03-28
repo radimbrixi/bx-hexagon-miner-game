@@ -2,8 +2,8 @@ const presetConfigs = [
   { id: "starter", name: "Starter Hive", cols: 8, rows: 8, mineRatio: 0.14, tag: "Calm" },
   { id: "scout", name: "Scout Comb", cols: 10, rows: 10, mineRatio: 0.17, tag: "Warm" },
   { id: "worker", name: "Worker Nest", cols: 13, rows: 13, mineRatio: 0.19, tag: "Alert" },
-  { id: "queen", name: "Queen Chamber", cols: 17, rows: 17, mineRatio: 0.22, tag: "Sharp" },
-  { id: "storm", name: "Storm Swarm", cols: 24, rows: 13, mineRatio: 0.25, tag: "Brutal" },
+  { id: "queen", name: "Queen Chamber", cols: 21, rows: 13, mineRatio: 0.22, tag: "Sharp" },
+  { id: "storm", name: "Storm Swarm", cols: 29, rows: 13, mineRatio: 0.25, tag: "Brutal" },
 ];
 
 const beeLayer = document.getElementById("bee-layer");
@@ -41,6 +41,8 @@ let timerId = null;
 let elapsedSeconds = 0;
 let highlightedCell = null;
 let overlayTimeoutId = null;
+let queenBeeFrameId = null;
+let queenBeeTimeoutId = null;
 
 const beeConfigs = [
   { edge: "top", duration: 36, delay: 0, scale: 1.0 },
@@ -158,6 +160,14 @@ function clearEffects() {
     clearTimeout(overlayTimeoutId);
     overlayTimeoutId = null;
   }
+  if (queenBeeFrameId) {
+    cancelAnimationFrame(queenBeeFrameId);
+    queenBeeFrameId = null;
+  }
+  if (queenBeeTimeoutId) {
+    clearTimeout(queenBeeTimeoutId);
+    queenBeeTimeoutId = null;
+  }
 }
 
 function createAmbientBees() {
@@ -219,12 +229,135 @@ function spawnParticles(type, count) {
   }
 }
 
+function spawnFireworks() {
+  const colors = ["#ffd75e", "#ff8a5b", "#fff0a6", "#8ae3ff", "#ff9fd2"];
+
+  for (let burst = 0; burst < 7; burst += 1) {
+    const centerX = 14 + Math.random() * 72;
+    const centerY = 10 + Math.random() * 42;
+
+    for (let index = 0; index < 18; index += 1) {
+      const particle = document.createElement("div");
+      particle.className = "particle firework";
+      const angle = (Math.PI * 2 * index) / 18;
+      const distance = 36 + Math.random() * 84;
+      particle.style.left = `${centerX}vw`;
+      particle.style.top = `${centerY}vh`;
+      particle.style.animationDuration = `${900 + Math.random() * 500}ms`;
+      particle.style.animationDelay = `${burst * 140 + Math.random() * 120}ms`;
+      particle.style.setProperty("--burst-x", `${Math.cos(angle) * distance}px`);
+      particle.style.setProperty("--burst-y", `${Math.sin(angle) * distance}px`);
+      particle.style.setProperty("--burst-scale", `${0.8 + Math.random() * 0.9}`);
+      particle.style.setProperty("--burst-color", colors[(burst + index) % colors.length]);
+      fxLayer.appendChild(particle);
+      particle.addEventListener("animationend", () => particle.remove(), { once: true });
+    }
+  }
+}
+
+function getSafeCellsForEggs() {
+  const safeCells = [];
+
+  for (let row = 0; row < boardState.config.rows; row += 1) {
+    for (let col = 0; col < boardState.config.cols; col += 1) {
+      const cell = boardState.cells[row][col];
+      if (!cell.mine && cell.revealed) {
+        safeCells.push({ row, col });
+      }
+    }
+  }
+
+  safeCells.sort((left, right) => (left.row + left.col) - (right.row + right.col));
+  return safeCells;
+}
+
+function markEggAt(row, col) {
+  const cell = boardState.cells[row][col];
+  cell.egged = true;
+  const selector = `.hex-cell[data-row="${row}"][data-col="${col}"]`;
+  const button = boardElement.querySelector(selector);
+  if (button) {
+    button.classList.add("egged");
+  }
+}
+
+function animateQueenBee() {
+  const safeCells = getSafeCellsForEggs();
+  if (safeCells.length === 0) {
+    return;
+  }
+
+  const queenBee = document.createElement("div");
+  queenBee.className = "mother-bee";
+  boardElement.appendChild(queenBee);
+
+  const metrics = getBoardMetrics(boardState.config, getActiveHexSize());
+  const route = safeCells.filter((_, index) => index % Math.max(1, Math.floor(safeCells.length / 18)) === 0);
+  if (route[route.length - 1] !== safeCells[safeCells.length - 1]) {
+    route.push(safeCells[safeCells.length - 1]);
+  }
+
+  const points = route.map(({ row, col }) => ({
+    x: (col * metrics.horizontalStep) + (metrics.hexSize * 0.1),
+    y: (row * metrics.verticalStep) + (col % 2 === 1 ? metrics.hexHeight / 2 : 0) - 8,
+    row,
+    col,
+  }));
+
+  let pointIndex = 0;
+  let segmentStart = 0;
+  const segmentDuration = 260;
+  let lastEggIndex = -1;
+
+  function step(timestamp) {
+    if (!segmentStart) {
+      segmentStart = timestamp;
+    }
+
+    const current = points[pointIndex];
+    const next = points[Math.min(pointIndex + 1, points.length - 1)];
+    const progress = Math.min((timestamp - segmentStart) / segmentDuration, 1);
+    const x = current.x + ((next.x - current.x) * progress);
+    const y = current.y + ((next.y - current.y) * progress);
+    queenBee.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+
+    const eggTargetIndex = Math.floor(((pointIndex + progress) / points.length) * safeCells.length);
+    if (eggTargetIndex > lastEggIndex && eggTargetIndex < safeCells.length) {
+      const eggTarget = safeCells[eggTargetIndex];
+      markEggAt(eggTarget.row, eggTarget.col);
+      lastEggIndex = eggTargetIndex;
+    }
+
+    if (progress >= 1) {
+      pointIndex += 1;
+      segmentStart = timestamp;
+      if (pointIndex >= points.length - 1) {
+        while (lastEggIndex < safeCells.length - 1) {
+          lastEggIndex += 1;
+          const eggTarget = safeCells[lastEggIndex];
+          markEggAt(eggTarget.row, eggTarget.col);
+        }
+
+        queenBeeTimeoutId = window.setTimeout(() => queenBee.remove(), 900);
+        queenBeeFrameId = null;
+        return;
+      }
+    }
+
+    queenBeeFrameId = window.requestAnimationFrame(step);
+  }
+
+  queenBeeFrameId = window.requestAnimationFrame(step);
+}
+
 function celebrateWin() {
-  spawnParticles("win-spark", 26);
+  spawnParticles("win-spark", 32);
+  spawnFireworks();
+  animateQueenBee();
   showOverlay({
     eyebrow: "Hive cleared",
     title: "Sweet victory",
-    message: `Fantastic run. You cleared the whole honeycomb in ${formatTime(elapsedSeconds)}.`,
+    message: `Fantastic run. You cleared the whole honeycomb in ${formatTime(elapsedSeconds)}, and the mother bee is laying fresh eggs in the safe comb.`,
     buttonLabel: "Play Another Round",
   });
 }
@@ -278,13 +411,14 @@ function createEmptyBoard(config) {
     const rowCells = [];
     for (let col = 0; col < config.cols; col += 1) {
       rowCells.push({
-        row,
-        col,
-        mine: false,
-        adjacent: 0,
-        revealed: false,
-        flagged: false,
-      });
+      row,
+      col,
+      mine: false,
+      adjacent: 0,
+      revealed: false,
+      flagged: false,
+      egged: false,
+    });
     }
     cells.push(rowCells);
   }
@@ -419,10 +553,12 @@ function revealCell(row, col) {
     boardState.hasWon = true;
     stopTimer();
     setStatus("Hive secured", `You cleared ${boardState.config.cols} x ${boardState.config.rows} without a blast.`);
+    renderBoard();
     celebrateWin();
-  } else {
-    setStatus("Sweep in progress", "Clear safe cells and flag the suspicious hexes.");
+    return;
   }
+
+  setStatus("Sweep in progress", "Clear safe cells and flag the suspicious hexes.");
 
   renderBoard();
 }
