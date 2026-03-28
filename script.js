@@ -45,6 +45,7 @@ let overlayTimeoutId = null;
 let queenBeeFrameId = null;
 let queenBeeTimeoutId = null;
 let hatchTimeoutId = null;
+let babyBeeFrameIds = [];
 
 const beeConfigs = [
   { edge: "top", duration: 36, delay: 0, scale: 1.0 },
@@ -174,6 +175,10 @@ function clearEffects() {
     clearTimeout(hatchTimeoutId);
     hatchTimeoutId = null;
   }
+  for (const frameId of babyBeeFrameIds) {
+    cancelAnimationFrame(frameId);
+  }
+  babyBeeFrameIds = [];
 }
 
 function createAmbientBees() {
@@ -287,6 +292,123 @@ function markEggAt(row, col) {
   }
 }
 
+function cubicBezierPoint(start, controlA, controlB, end, t) {
+  const inverse = 1 - t;
+  const x = (inverse ** 3 * start.x)
+    + (3 * inverse ** 2 * t * controlA.x)
+    + (3 * inverse * t ** 2 * controlB.x)
+    + (t ** 3 * end.x);
+  const y = (inverse ** 3 * start.y)
+    + (3 * inverse ** 2 * t * controlA.y)
+    + (3 * inverse * t ** 2 * controlB.y)
+    + (t ** 3 * end.y);
+  return { x, y };
+}
+
+function cubicBezierTangent(start, controlA, controlB, end, t) {
+  const inverse = 1 - t;
+  const x = (3 * inverse ** 2 * (controlA.x - start.x))
+    + (6 * inverse * t * (controlB.x - controlA.x))
+    + (3 * t ** 2 * (end.x - controlB.x));
+  const y = (3 * inverse ** 2 * (controlA.y - start.y))
+    + (6 * inverse * t * (controlB.y - controlA.y))
+    + (3 * t ** 2 * (end.y - controlB.y));
+  return { x, y };
+}
+
+function easeOutCubic(value) {
+  return 1 - ((1 - value) ** 3);
+}
+
+function buildBabyBeeRoutes(eggCells, metrics) {
+  const centerX = metrics.boardWidth / 2;
+  const centerY = metrics.boardHeight / 2;
+  const outerRadiusX = (metrics.boardWidth / 2) + 180;
+  const outerRadiusY = (metrics.boardHeight / 2) + 140;
+  const sortedEggs = eggCells
+    .map((cell) => {
+      const startX = (cell.col * metrics.horizontalStep) + (metrics.hexSize * 0.3);
+      const startY = (cell.row * metrics.verticalStep) + (cell.col % 2 === 1 ? metrics.hexHeight / 2 : 0) + (metrics.hexHeight * 0.25);
+      const angle = Math.atan2(startY - centerY, startX - centerX);
+      return { ...cell, startX, startY, angle };
+    })
+    .sort((left, right) => left.angle - right.angle);
+
+  const count = sortedEggs.length;
+
+  return sortedEggs.map((egg, index) => {
+    const laneAngle = (-Math.PI) + ((index + 0.5) / count * Math.PI * 2);
+    const exitX = centerX + (Math.cos(laneAngle) * outerRadiusX);
+    const exitY = centerY + (Math.sin(laneAngle) * outerRadiusY);
+    const tangentX = -Math.sin(laneAngle);
+    const tangentY = Math.cos(laneAngle);
+    const outwardX = Math.cos(laneAngle);
+    const outwardY = Math.sin(laneAngle);
+    const controlA = {
+      x: egg.startX + (tangentX * (36 + (index % 5) * 6)) + (outwardX * 18),
+      y: egg.startY + (tangentY * (36 + (index % 5) * 6)) + (outwardY * 18),
+    };
+    const controlB = {
+      x: centerX + (outwardX * (outerRadiusX * 0.52)) + (tangentX * (52 + (index % 7) * 8)),
+      y: centerY + (outwardY * (outerRadiusY * 0.52)) + (tangentY * (52 + (index % 7) * 8)),
+    };
+
+    return {
+      row: egg.row,
+      col: egg.col,
+      start: { x: egg.startX, y: egg.startY },
+      controlA,
+      controlB,
+      end: { x: exitX, y: exitY },
+      duration: 2600 + (index % 6) * 140,
+      delay: index * 70,
+      startScale: 0.5,
+      endScale: 1,
+    };
+  });
+}
+
+function animateBabyBeeFlight(route) {
+  const babyBee = document.createElement("div");
+  babyBee.className = "baby-bee";
+  babyBee.style.left = "0";
+  babyBee.style.top = "0";
+  boardElement.appendChild(babyBee);
+
+  let animationStart = null;
+
+  function step(timestamp) {
+    if (!animationStart) {
+      animationStart = timestamp + route.delay;
+    }
+
+    if (timestamp < animationStart) {
+      const frameId = window.requestAnimationFrame(step);
+      babyBeeFrameIds.push(frameId);
+      return;
+    }
+
+    const linearProgress = Math.min((timestamp - animationStart) / route.duration, 1);
+    const progress = easeOutCubic(linearProgress);
+    const point = cubicBezierPoint(route.start, route.controlA, route.controlB, route.end, progress);
+    const tangent = cubicBezierTangent(route.start, route.controlA, route.controlB, route.end, progress);
+    const angle = Math.atan2(tangent.y, tangent.x) * (180 / Math.PI);
+    const scale = route.startScale + ((route.endScale - route.startScale) * progress);
+    babyBee.style.transform = `translate3d(${point.x}px, ${point.y}px, 0) rotate(${angle}deg) scale(${scale})`;
+
+    if (linearProgress >= 1) {
+      babyBee.remove();
+      return;
+    }
+
+    const frameId = window.requestAnimationFrame(step);
+    babyBeeFrameIds.push(frameId);
+  }
+
+  const initialFrameId = window.requestAnimationFrame(step);
+  babyBeeFrameIds.push(initialFrameId);
+}
+
 function hatchYoungBees() {
   const eggCells = [];
 
@@ -308,34 +430,8 @@ function hatchYoungBees() {
   }
 
   const metrics = getBoardMetrics(boardState.config, getActiveHexSize());
-  const centerX = metrics.boardWidth / 2;
-  const centerY = metrics.boardHeight / 2;
-
-  eggCells.forEach(({ row, col }, index) => {
-    const babyBee = document.createElement("div");
-    babyBee.className = "baby-bee";
-    const startX = (col * metrics.horizontalStep) + (metrics.hexSize * 0.3);
-    const startY = (row * metrics.verticalStep) + (col % 2 === 1 ? metrics.hexHeight / 2 : 0) + (metrics.hexHeight * 0.25);
-    const dx = startX - centerX;
-    const dy = startY - centerY;
-    const length = Math.hypot(dx, dy) || 1;
-    const normalizedX = dx / length;
-    const normalizedY = dy / length;
-    const distance = 90 + Math.random() * 210;
-    const spiralX = (normalizedX * distance) + ((Math.random() - 0.5) * 80);
-    const spiralY = (normalizedY * distance) + ((Math.random() - 0.5) * 80);
-
-    babyBee.style.left = `${startX}px`;
-    babyBee.style.top = `${startY}px`;
-    babyBee.style.setProperty("--spiral-x", `${spiralX}px`);
-    babyBee.style.setProperty("--spiral-y", `${spiralY}px`);
-    babyBee.style.setProperty("--spin-turns", `${1.4 + Math.random() * 1.6}`);
-    babyBee.style.setProperty("--flight-duration", `${1500 + Math.random() * 1200}ms`);
-    babyBee.style.animationDelay = `${index * 18}ms`;
-
-    boardElement.appendChild(babyBee);
-    babyBee.addEventListener("animationend", () => babyBee.remove(), { once: true });
-  });
+  const routes = buildBabyBeeRoutes(eggCells, metrics);
+  routes.forEach((route) => animateBabyBeeFlight(route));
 }
 
 function animateQueenBee() {
