@@ -32,6 +32,8 @@ const sizeSlider = document.getElementById("size-slider");
 const difficultySlider = document.getElementById("difficulty-slider");
 const sizeValue = document.getElementById("size-value");
 const difficultyValue = document.getElementById("difficulty-value");
+const leaderboardTitle = document.getElementById("leaderboard-title");
+const leaderboardNote = document.getElementById("leaderboard-note");
 const leaderboardList = document.getElementById("leaderboard-list");
 
 const BASE_HEX_SIZE = 40;
@@ -56,7 +58,7 @@ let queenBeeFrameId = null;
 let queenBeeTimeoutId = null;
 let hatchTimeoutId = null;
 let babyBeeFrameIds = [];
-let leaderboardEntries = loadLeaderboard();
+let leaderboardStore = loadLeaderboardStore();
 
 const beeConfigs = [
   { edge: "top", duration: 36, delay: 0, scale: 1.0 },
@@ -172,27 +174,58 @@ function formatTime(milliseconds) {
   return `${mins}:${String(secs).padStart(2, "0")}.${tenths}`;
 }
 
-function loadLeaderboard() {
+function getLeaderboardBucket(config) {
+  return currentMode === "custom" || config.id === "custom" ? "custom" : config.id;
+}
+
+function getActiveLeaderboardConfig() {
+  return currentMode === "custom" ? buildCustomConfig() : selectedConfig;
+}
+
+function getLeaderboardTitleText(config) {
+  return config.id === "custom" ? "Custom Hive Records" : `${config.name} Records`;
+}
+
+function getLeaderboardNoteText(config) {
+  return config.id === "custom"
+    ? "Shared across every custom size and difficulty combination."
+    : `Only ${config.name} wins are engraved here.`;
+}
+
+function getLeaderboardEntries(config = getActiveLeaderboardConfig()) {
+  const bucket = getLeaderboardBucket(config);
+  const entries = leaderboardStore[bucket];
+  return Array.isArray(entries) ? entries : [];
+}
+
+function loadLeaderboardStore() {
   try {
     const stored = window.localStorage.getItem(LEADERBOARD_STORAGE_KEY);
     const parsed = stored ? JSON.parse(stored) : [];
-    return Array.isArray(parsed) ? parsed : [];
+    if (Array.isArray(parsed)) {
+      return { legacy: parsed };
+    }
+    return parsed && typeof parsed === "object" ? parsed : {};
   } catch {
-    return [];
+    return {};
   }
 }
 
-function saveLeaderboard() {
-  window.localStorage.setItem(LEADERBOARD_STORAGE_KEY, JSON.stringify(leaderboardEntries));
+function saveLeaderboardStore() {
+  window.localStorage.setItem(LEADERBOARD_STORAGE_KEY, JSON.stringify(leaderboardStore));
 }
 
 function renderLeaderboard() {
+  const activeConfig = getActiveLeaderboardConfig();
+  const leaderboardEntries = getLeaderboardEntries(activeConfig);
   leaderboardList.innerHTML = "";
+  leaderboardTitle.textContent = getLeaderboardTitleText(activeConfig);
+  leaderboardNote.textContent = getLeaderboardNoteText(activeConfig);
 
   if (leaderboardEntries.length === 0) {
     const emptyRow = document.createElement("li");
     emptyRow.className = "leaderboard-empty";
-    emptyRow.textContent = "No honey runs yet. Win a round to engrave the leather board.";
+    emptyRow.textContent = `No honey runs yet for ${activeConfig.id === "custom" ? "the custom hive" : activeConfig.name}.`;
     leaderboardList.appendChild(emptyRow);
     return;
   }
@@ -213,15 +246,18 @@ function renderLeaderboard() {
 }
 
 function recordWin() {
-  leaderboardEntries.push({
+  const bucket = getLeaderboardBucket(boardState.config);
+  const bucketEntries = getLeaderboardEntries(boardState.config);
+
+  bucketEntries.push({
     mode: boardState.config.name,
     board: `${boardState.config.cols} x ${boardState.config.rows}`,
     timeMs: Math.round(elapsedMs),
   });
 
-  leaderboardEntries.sort((left, right) => left.timeMs - right.timeMs);
-  leaderboardEntries = leaderboardEntries.slice(0, 5);
-  saveLeaderboard();
+  bucketEntries.sort((left, right) => left.timeMs - right.timeMs);
+  leaderboardStore[bucket] = bucketEntries.slice(0, 5);
+  saveLeaderboardStore();
   renderLeaderboard();
 }
 
