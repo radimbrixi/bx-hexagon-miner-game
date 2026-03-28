@@ -323,8 +323,8 @@ function easeOutCubic(value) {
 function buildBabyBeeRoutes(eggCells, metrics) {
   const centerX = metrics.boardWidth / 2;
   const centerY = metrics.boardHeight / 2;
-  const outerRadiusX = (metrics.boardWidth / 2) + 180;
-  const outerRadiusY = (metrics.boardHeight / 2) + 140;
+  const outerRadiusX = (metrics.boardWidth / 2) + 340;
+  const outerRadiusY = (metrics.boardHeight / 2) + 260;
   const sortedEggs = eggCells
     .map((cell) => {
       const startX = (cell.col * metrics.horizontalStep) + (metrics.hexSize * 0.3);
@@ -360,10 +360,13 @@ function buildBabyBeeRoutes(eggCells, metrics) {
       controlA,
       controlB,
       end: { x: exitX, y: exitY },
-      duration: 2600 + (index % 6) * 140,
+      duration: 3000 + (index % 6) * 170,
       delay: index * 70,
       startScale: 0.5,
       endScale: 1,
+      spiralAmplitude: 16 + (index % 5) * 5,
+      spiralTurns: 1.6 + ((index % 4) * 0.45),
+      spiralDirection: index % 2 === 0 ? 1 : -1,
     };
   });
 }
@@ -392,9 +395,16 @@ function animateBabyBeeFlight(route) {
     const progress = easeOutCubic(linearProgress);
     const point = cubicBezierPoint(route.start, route.controlA, route.controlB, route.end, progress);
     const tangent = cubicBezierTangent(route.start, route.controlA, route.controlB, route.end, progress);
-    const angle = Math.atan2(tangent.y, tangent.x) * (180 / Math.PI);
+    const tangentLength = Math.hypot(tangent.x, tangent.y) || 1;
+    const normalX = (-tangent.y / tangentLength);
+    const normalY = (tangent.x / tangentLength);
+    const spiralWave = Math.sin(progress * Math.PI * 2 * route.spiralTurns) * route.spiralDirection;
+    const spiralRadius = route.spiralAmplitude * (0.45 + (progress * 0.75));
+    const x = point.x + (normalX * spiralWave * spiralRadius);
+    const y = point.y + (normalY * spiralWave * spiralRadius);
+    const angle = Math.atan2(tangent.y, tangent.x) * (180 / Math.PI) + (spiralWave * 12);
     const scale = route.startScale + ((route.endScale - route.startScale) * progress);
-    babyBee.style.transform = `translate3d(${point.x}px, ${point.y}px, 0) rotate(${angle}deg) scale(${scale})`;
+    babyBee.style.transform = `translate3d(${x}px, ${y}px, 0) rotate(${angle}deg) scale(${scale})`;
 
     if (linearProgress >= 1) {
       babyBee.remove();
